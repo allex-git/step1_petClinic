@@ -1,0 +1,65 @@
+require 'yaml'   # підключаємо модуль (для структурованих даних + підтримка вкладень)
+vars = YAML.load_file('vars.yml') # завантажуємо змінні з файлу
+
+Vagrant.configure("2") do |config|
+  config.vm.box = vars['box_name'] || "ubuntu/ubuntu2204"
+
+# параметри для vm
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = vars['vm_memory'] || 3062
+    vb.cpus   = vars['vm_cpus']   || 6
+  end
+
+ # апдейт пакетів при першому запуску
+  config.vm.provision "shell", inline: "sudo apt-get update -y", run: "once"
+
+# DB VM 
+  config.vm.define "db" do |db|
+    db.vm.hostname = "petclinic-db"
+    db.vm.network "private_network", ip: vars['db_host']
+    db.vm.provider "virtualbox" do |vb|
+      vb.name = "Step_1_DB"
+    end
+
+# іниаляція mysql, створення бази, користувача, наданння досутпу app_vm
+    db.vm.provision "shell", path: "db.sh", privileged: true, env: {
+      "DB_HOST"       => vars['db_host'].to_s,
+      "DB_PORT"       => vars['db_port'].to_s,
+      "DB_NAME"       => vars['db_name'].to_s,
+      "DB_USER"       => vars['db_user'].to_s,
+      "DB_PASS"       => vars['db_pass'].to_s,
+      "DB_CLIENT_HOST"=> vars['db_client_host'].to_s
+    }
+  end
+
+# APP VM
+  config.vm.define "app" do |app|
+    app.vm.hostname = "petclinic-app"
+    app.vm.network "private_network", ip: vars['app_ip']
+
+# проброс порта
+    app.vm.network "forwarded_port",
+                   guest: 8080,
+                   host: vars['host_port'],
+                   host_ip: "127.0.0.1",
+                   auto_correct: true
+
+    app.vm.provider "virtualbox" do |vb|
+      vb.name = "Step_1_APP"
+    end
+
+# інсталяція java, git, клонування PetClinic, збірка maven, запуск сервісу
+    app.vm.provision "shell", path: "app.sh", privileged: true, env: {
+      "APP_USER"      => vars['app_user'].to_s,
+      "PROJECT_REPO"  => vars['project_repo'].to_s,
+      "PROJECT_SUBDIR"=> vars['project_subdir'].to_s,
+      "PROJECT_DIR"   => vars['project_dir'].to_s,
+      "APP_DIR"       => vars['app_dir'].to_s,
+      "DB_HOST"       => vars['db_host'].to_s,
+      "DB_PORT"       => vars['db_port'].to_s,
+      "DB_NAME"       => vars['db_name'].to_s,
+      "DB_USER"       => vars['db_user'].to_s,
+      "DB_PASS"       => vars['db_pass'].to_s
+    }
+  end
+end

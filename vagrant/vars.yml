@@ -1,0 +1,21 @@
+# параметри vm
+box_name: "generic/ubuntu2204"
+vm_memory: 3062
+vm_cpus: 6
+
+# db
+db_host: "192.168.56.10"
+db_port: 3306
+db_name: "petclinic"
+db_user: "petclinic"
+db_pass: "petclinic"
+db_client_host: "192.168.56.%"
+
+# app
+app_ip: "192.168.56.11"
+app_user: "appuser"
+project_repo: "https://github.com/allex-git/step1_petClinic.git"
+project_subdir: ""
+project_dir: "/home/appuser/petclinic"
+app_dir: "/home/appuser"
+host_port: 8080
